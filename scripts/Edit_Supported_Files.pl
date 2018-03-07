@@ -22,26 +22,33 @@ else{
 			exit(0);
 	}
 }
-
-my $menu	=	{'Backup'  => {1 => ["Edit your Manual Backupset File","$backupsetFilePath"], 2 => ["Edit your Scheduled Backupset File","$backupsetSchFilePath"]},
-			 'Restore' => {6 => ["Edit your Manual Restoreset File","$RestoresetFile"], 7 => ["Edit your Scheduled Restoreset File","$RestoresetSchFile"]},
-			 'Exclude' => {3 => ["Edit your FullExcludeList File","$excludeFullPath"], 4 => ["Edit your PartialExcludeList File","$excludePartialPath"], 5 => ["Edit your RegexExcludeList File","$regexExcludePath"]}
+$menu	=	{'1.Backup'  => {1 => ["Edit your Manual Backupset File","$backupsetFilePath"], 2 => ["Edit your Scheduled Backupset File","$backupsetSchFilePath"]},
+				'2.Express Backup' => {3 => ["Edit your Express Backupset File","$localBackupsetFilePath"]},
+				'3.Exclude' => {4 => ["Edit your FullExcludeList File","$excludeFullPath"], 5 => ["Edit your PartialExcludeList File","$excludePartialPath"], 6 => ["Edit your RegexExcludeList File","$regexExcludePath"]},
+				'4.Restore' => {7 => ["Edit your Manual Restoreset File","$RestoresetFile"], 8 => ["Edit your Scheduled Restoreset File","$RestoresetSchFile"]}			 
+				
 			};
+@menuArray = ['1.Backup','2.Express Backup','3.Exclude','4.Restore'];
+		
 my $filePermission = 0777;
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Operations Start ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
+START:
 print Constants->CONST->{'AskOption'}.qq($lineFeed$lineFeed);
 displayMenu($menu);
+print $lineFeed.Constants->CONST->{'ctrlc2Exit'}.$lineFeed;
 print $lineFeed.Constants->CONST->{'EnterChoice'};
 my $userChoice = <STDIN>;
 Chomp(\$userChoice);
 $userChoice =~ s/^0+(\d+)/$1/g;#removing initial zero from the user input for given choice.
-my $keyName = returnKeyName($userChoice,['Backup','Exclude','Restore']);#userChoice and array of keyname to be returned
+my $keyName = returnKeyName($userChoice,@menuArray);#userChoice and array of keyname to be returned
 unless ($keyName){
 	print $lineFeed.Constants->CONST->{'InvalidChoice'}.Constants->CONST->{'TryAgain'}.$lineFeed;
 	exit(0);
 }
-openViEditor($menu,$keyName,$userChoice);
+if (openViEditor($menu,$keyName,$userChoice)){
+	print $lineFeed;
+	goto START;
+}
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Operations End ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Defining utility functions ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -60,7 +67,7 @@ sub openViEditor {
 		if (!-e $fileLocation){
 			$fileLocation =~ /(.*\/)[a-zA-Z0-9.]/;
 			my $scheduleDirLoc = $1;
-			my $mkRes = `mkdir -p $scheduleDirLoc $errorRedirection`;
+			my $mkRes = `mkdir -p '$scheduleDirLoc' $errorRedirection`;
 			open(SETFILE, ">", $fileLocation) or die "Couldn't create $fileLocation, Reason: $!\n";
 	                close(SETFILE);
         	        chmod $filePermission, $fileLocation;
@@ -70,12 +77,15 @@ sub openViEditor {
 	print $lineFeed.Constants->CONST->{'FileopeningMess'}.$lineFeed;
 	holdScreen2displayMessage(4);
 	#print $lineFeed.Constants->CONST->{'fileEditSuccessfully'}.$lineFeed;
-	my $operationStatus = system "vi $fileLocation";
+	my $operationStatus = system "vi '$fileLocation'";
 	if ($operationStatus == 0){
-		print $lineFeed.Constants->CONST->{'fileEditSuccessfully'}.$lineFeed;
+		print $lineFeed.qq(File "$fileLocation" ).Constants->CONST->{'fileEditSuccessfully'}.$lineFeed;
+		print $lineFeed.Constants->CONST->{'editOtherSupportedFiles'};
+		my $choice = getConfirmationChoice();
+		Chomp($choice);
+		return 1 if ($choice =~/^y$/i);
 	}else{
 		print $lineFeed.Constants->CONST->{'operationNotCompleted'}.qq(Reason : $!\n);
 	}
 }
-
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Functions defination End ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

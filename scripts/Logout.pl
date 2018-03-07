@@ -17,6 +17,7 @@ if($CurrentUser ne "" && -d $usrProfileDir) {
 	$confFilePath = "$usrProfileDir/".Constants->CONST->{'configurationFile'};
 	$ManualBackupPidpath = $usrProfileDir."/Backup/Manual/pid.txt";
 	$ManualRestorePidpath = $usrProfileDir."/Restore/Manual/pid.txt";
+	$ManualExpressBackupPidpath = $usrProfileDir."/LocalBackup/Manual/pid.txt";
 }else{
 	print Constants->CONST->{'LogoutInfo'}.$lineFeed;
 	exit(0);
@@ -35,18 +36,34 @@ finalLogout();
 # Usgae                   : killOrContinueJob()
 # Added By                : Abhishek Verma.
 #****************************************************************************/
-
 sub killOrContinueJob{
-	if ((-e $ManualBackupPidpath) and (-e $ManualRestorePidpath)){
-		killJob(Constants->CONST->{'logoutBackupRestoreJob'},'ManualBackup');
-		killJob('','ManualRestore');
-	}else{
+	if ((-e $ManualBackupPidpath) and (-e $ManualRestorePidpath) and (-e $ManualExpressBackupPidpath)){
+		killJob(Constants->CONST->{'logoutBackupExpressBackupRestoreJob'},'manual_backup');
+		killJob('','manual_restore');
+		killJob('','manual_localBackup');
+	}
+	elsif ((-e $ManualBackupPidpath) and (-e $ManualRestorePidpath)){
+		killJob(Constants->CONST->{'logoutBackupRestoreJob'},'manual_backup');
+		killJob('','manual_restore');
+	}
+	elsif ((-e $ManualBackupPidpath) and (-e $ManualExpressBackupPidpath)){
+		killJob(Constants->CONST->{'logoutBackupExpressBackupJob'},'manual_backup');
+		killJob('','manual_localBackup');
+	}
+	elsif ((-e $ManualRestorePidpath) and (-e $ManualExpressBackupPidpath)){
+		killJob(Constants->CONST->{'logoutExpressBackupRestoreJob'},'manual_restore');
+		killJob('','manual_localBackup');
+	}	
+	else{
 		if(-e $ManualBackupPidpath){
-			killJob(Constants->CONST->{'logoutBackupJob'},'ManualBackup');
+			killJob(Constants->CONST->{'logoutBackupJob'},'manual_backup');
 		}
 		if(-e $ManualRestorePidpath){
-			killJob(Constants->CONST->{'logoutRestoreJob'},'ManualRestore');
+			killJob(Constants->CONST->{'logoutRestoreJob'},'manual_restore');
 		}
+		if(-e $ManualExpressBackupPidpath){
+			killJob(Constants->CONST->{'logoutExpressBackupJob'},'manual_localBackup');
+		}		
 	}
 }
 
@@ -68,7 +85,7 @@ sub killJob{
 		$confirmationChoice = 'Y';
 	}
 	if ($confirmationChoice eq 'y' or $confirmationChoice eq 'Y'){
-		$JobTermCmd = "perl $jobTerminationScript $jobToTerminate";
+		$JobTermCmd = "perl '$jobTerminationScript' '$jobToTerminate'";
 		system($JobTermCmd);
 		if(-e Constants->CONST->{'incorrectPwd'}){
         		print Constants->CONST->{'noLogOut'}.$lineFeed;
